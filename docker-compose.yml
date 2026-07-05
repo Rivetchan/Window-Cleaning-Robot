@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  robot-backend:
+    build: .
+    container_name: robot-backend
+    restart: unless-stopped
+    ports:
+      - "7080:7080"
+    volumes:
+      - ./app:/app/app
+      - ./logs:/app/logs
+      - ./data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Jakarta
+      - LOG_LEVEL=INFO
+      - PYTHONPATH=/app
+    networks:
+      - robot-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:7080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile.streamlit
+    container_name: streamlit-dashboard
+    restart: unless-stopped
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./app_streamlit.py:/app/app_streamlit.py
+      - ./streamlit_logs:/app/logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=Asia/Jakarta
+    networks:
+      - robot-network
+    depends_on:
+      - robot-backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  robot-network:
+    driver: bridge
+    name: robot-network
